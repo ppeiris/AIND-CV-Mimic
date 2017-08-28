@@ -3,12 +3,14 @@
 
 // --- Affectiva setup ---
 
+
 // The affdex SDK Needs to create video and canvas elements in the DOM
 var divRoot = $("#camera")[0];  // div node where we want to add these elements
 var width = 640, height = 480;  // camera image size
 var faceMode = affdex.FaceDetectorMode.LARGE_FACES;  // face mode parameter
 
 // Initialize an Affectiva CameraDetector object
+
 var detector = new affdex.CameraDetector(divRoot, width, height, faceMode);
 
 // Enable detection of all Expressions, Emotions and Emojis classifiers.
@@ -16,6 +18,8 @@ detector.detectAllEmotions();
 detector.detectAllExpressions();
 detector.detectAllEmojis();
 detector.detectAllAppearance();
+
+
 
 // --- Utility values and functions ---
 
@@ -148,11 +152,18 @@ function drawFeaturePoints(canvas, img, face) {
   // TODO: Set the stroke and/or fill style you want for each feature point marker
   // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D#Fill_and_stroke_styles
   // <your code here>
-  
+
+  ctx.fillStyle = '#00f';
+
+
+
   // Loop over each feature point in the face
   for (var id in face.featurePoints) {
     var featurePoint = face.featurePoints[id];
-
+    console.log(id);
+    ctx.beginPath();
+    ctx.arc(featurePoint.x, featurePoint.y, 1, 0, 2 * Math.PI);
+    ctx.stroke();
     // TODO: Draw feature point, e.g. as a circle using ctx.arc()
     // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/arc
     // <your code here>
@@ -166,7 +177,10 @@ function drawEmoji(canvas, img, face) {
 
   // TODO: Set the font and style you want for the emoji
   // <your code here>
-  
+  ctx.font = "48px serif";
+
+  ctx.fillText(face.emojis.dominantEmoji, face.featurePoints[0].x-50, face.featurePoints[0].y+50);
+
   // TODO: Draw it using ctx.strokeText() or fillText()
   // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
   // TIP: Pick a particular feature point as an anchor so that the emoji sticks to your face
