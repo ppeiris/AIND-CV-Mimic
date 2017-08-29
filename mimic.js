@@ -3,12 +3,13 @@
 
 // --- Affectiva setup ---
 
-
 // The affdex SDK Needs to create video and canvas elements in the DOM
 var divRoot = $("#camera")[0];  // div node where we want to add these elements
 var width = 640, height = 480;  // camera image size
 var faceMode = affdex.FaceDetectorMode.LARGE_FACES;  // face mode parameter
-
+var intervalID = 0;
+var numberof_impressions = 0;
+var numberof_correct_impressions = 0;
 // Initialize an Affectiva CameraDetector object
 
 var detector = new affdex.CameraDetector(divRoot, width, height, faceMode);
@@ -43,6 +44,23 @@ function setScore(correct, total) {
   $("#score").html("Score: " + correct + " / " + total);
 }
 
+
+/**
+ * Increase the correct number of detect value increase by one
+ *
+ */
+function increaseScore_Correct() {
+    $("#score_correct").html(parseInt($("#score_correct").html()) + 1);
+}
+
+/**
+ * Increase the total number of imporessions are presented to user by one
+ *
+ */
+function increaseScore_Total() {
+    $("#score_total").html(parseInt($("#score_total").html()) + 1);
+}
+
 // Display log messages and tracking results
 function log(node_name, msg) {
   $(node_name).append("<span>" + msg + "</span><br />")
@@ -55,6 +73,7 @@ function onStart() {
   if (detector && !detector.isRunning) {
     $("#logs").html("");  // clear out previous log
     detector.start();  // start detector
+    setTimer();
   }
   log('#logs', "Start button pressed");
 }
@@ -65,6 +84,7 @@ function onStop() {
   if (detector && detector.isRunning) {
     detector.removeEventListener();
     detector.stop();  // stop detector
+    clearInterval(intervalID);
   }
 };
 
@@ -95,7 +115,7 @@ detector.addEventListener("onWebcamConnectFailure", function() {
 // Add a callback to notify when detector is stopped
 detector.addEventListener("onStopSuccess", function() {
   log('#logs', "The detector reports stopped");
-  $("#results").html("");
+  $("#results").html(emojis[0]);
 });
 
 // Add a callback to notify when the detector is initialized and ready for running
@@ -107,6 +127,7 @@ detector.addEventListener("onInitializeSuccess", function() {
 
   // TODO(optional): Call a function to initialize the game, if needed
   // <your code here>
+
 });
 
 // Add a callback to receive the results from processing an image
@@ -135,9 +156,10 @@ detector.addEventListener("onImageResultsSuccess", function(faces, image, timest
     // Call functions to draw feature points and dominant emoji (for the first face only)
     drawFeaturePoints(canvas, image, faces[0]);
     drawEmoji(canvas, image, faces[0]);
-
+    mimicme(canvas, image, faces[0]);
     // TODO: Call your function to run the game (define it first!)
     // <your code here>
+
   }
 });
 
@@ -148,25 +170,14 @@ detector.addEventListener("onImageResultsSuccess", function(faces, image, timest
 function drawFeaturePoints(canvas, img, face) {
   // Obtain a 2D context object to draw on the canvas
   var ctx = canvas.getContext('2d');
-
-  // TODO: Set the stroke and/or fill style you want for each feature point marker
-  // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D#Fill_and_stroke_styles
-  // <your code here>
-
   ctx.fillStyle = '#00f';
-
-
-
   // Loop over each feature point in the face
   for (var id in face.featurePoints) {
     var featurePoint = face.featurePoints[id];
-    console.log(id);
+
     ctx.beginPath();
     ctx.arc(featurePoint.x, featurePoint.y, 1, 0, 2 * Math.PI);
     ctx.stroke();
-    // TODO: Draw feature point, e.g. as a circle using ctx.arc()
-    // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/arc
-    // <your code here>
   }
 }
 
@@ -174,30 +185,41 @@ function drawFeaturePoints(canvas, img, face) {
 function drawEmoji(canvas, img, face) {
   // Obtain a 2D context object to draw on the canvas
   var ctx = canvas.getContext('2d');
-
-  // TODO: Set the font and style you want for the emoji
-  // <your code here>
   ctx.font = "48px serif";
-
-  ctx.fillText(face.emojis.dominantEmoji, face.featurePoints[0].x-50, face.featurePoints[0].y+50);
-
-  // TODO: Draw it using ctx.strokeText() or fillText()
-  // See: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
-  // TIP: Pick a particular feature point as an anchor so that the emoji sticks to your face
-  // <your code here>
+  ctx.fillText(face.emojis.dominantEmoji, face.featurePoints[0].x-75, face.featurePoints[0].y-200);
 }
 
-// TODO: Define any variables and functions to implement the Mimic Me! game mechanics
+/**
+ * Set the timer for 10 seconds.
+ * This method reset existing timer and reset that to start from zero
+ */
+function setTimer() {
+    clearInterval(intervalID);
+    intervalID = setInterval(function(){changeMimicEmoji();}, 10000);
+}
 
-// NOTE:
-// - Remember to call your update function from the "onImageResultsSuccess" event handler above
-// - You can use setTargetEmoji() and setScore() functions to update the respective elements
-// - You will have to pass in emojis as unicode values, e.g. setTargetEmoji(128578) for a simple smiley
-// - Unicode values for all emojis recognized by Affectiva are provided above in the list 'emojis'
-// - To check for a match, you can convert the dominant emoji to unicode using the toUnicode() function
+/**
+ * Pick a random emoji icon from the list and display on the web page.
+ * User suppose to mimic this impression
+ * Everytime this method call and provide the a new imporession to the user
+ * the total number of number increase by one via increaseScore_Total method.
+ */
+function changeMimicEmoji() {
+    var i = Math.floor((Math.random() * 13) + 0);
+    setTargetEmoji(emojis[i]);
+    increaseScore_Total();
+}
 
-// Optional:
-// - Define an initialization/reset function, and call it from the "onInitializeSuccess" event handler above
-// - Define a game reset function (same as init?), and call it from the onReset() function above
-
-// <your code here>
+/**
+ * This method check if the user has mimic the correct imporession to match what
+ * we pick randomly from using changeMimicEmoji method. When user correctly mimic
+ * the impression we increase the correct count using increaseScore_Correct method
+ *
+ */
+function mimicme(canvas, img, face) {
+    if (toUnicode(face.emojis.dominantEmoji) == toUnicode($("#target").html())) {
+        $("#target").html('Nice Job');
+        setTimer();
+        increaseScore_Correct();
+    }
+}
